@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -euo pipefail
+
+expected_output="Hello to drone"
+output="$(./bin/hello)"
+
+if [[ "${output}" != "${expected_output}" ]]; then
+  echo "expected: ${expected_output}"
+  echo "     got: ${output}"
+  exit 1
+fi
