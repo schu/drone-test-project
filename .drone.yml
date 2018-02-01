@@ -3,3 +3,26 @@ pipeline:
     image: golang
     commands:
       - make
+  start-k8s-cluster:
+    group: k8s-setup
+    image: schu/drone-plugin-kube-spawn
+    addr: "localhost:50051"
+    setup: up
+  get-kubectl:
+    group: k8s-setup
+    image: busybox
+    commands:
+      - sh -c 'wget https://storage.googleapis.com/kubernetes-release/release/v1.9.2/bin/linux/amd64/kubectl -O kubectl && chmod 0755 kubectl'
+  test-k8s-cluster:
+    image: busybox
+    commands:
+      - sh -c './kubectl --kubeconfig ./kubeconfig get nodes'
+      - sh -c './kubectl --kubeconfig ./kubeconfig run nginx --image=nginx --replicas=3'
+      - sh -c './kubectl --kubeconfig ./kubeconfig get deployment nginx'
+      - sh -c 'set -ex; while true; do available=$(./kubectl --kubeconfig ./kubeconfig get deployment nginx -o jsonpath="{.status.availableReplicas}" || true); if [ -z $available ] || [ $available -lt 3 ]; then echo "not ready yet"; sleep 3; else ./kubectl --kubeconfig ./kubeconfig get deployments; break; fi; done'
+  stop-k8s-cluster:
+    image: schu/drone-plugin-kube-spawn
+    addr: "localhost:50051"
+    setup: destroy
+    when:
+      status: [ failure, killed, success ]
